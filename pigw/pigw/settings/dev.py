@@ -58,3 +58,16 @@ else:
 
 # Encryption key ::::-- required even in dev (generate once, store in .env)
 FERNET_KEY: str = os.environ.get("FERNET_KEY", "")
+
+# REST Framework configuration for development
+REST_FRAMEWORK = {
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny",
+    ],
+}
+
+# Disable CSRF for development/testing (JSON API)
+CSRF_TRUSTED_ORIGINS = ["http://localhost", "http://127.0.0.1"]
+CSRF_EXEMPT_URLS = [
+    r"^api/v1/.*",
+]

@@ -1,0 +1,622 @@
+{
+  "info": {
+    "name": "HealthcarePIGW API Collection",
+    "description": "Complete API testing collection for Healthcare Patient Information Gateway (PIGW) - FHIR-compliant patient intake and retrieval system",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Admin Login (Session)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 302) {",
+                  "    pm.environment.set('authenticated', true);",
+                  "    console.log('Successfully logged in via session');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "admin",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "your_password_here",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "login"
+              ]
+            },
+            "description": "Login to admin panel to obtain session cookie. Replace 'your_password_here' with actual admin password."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Patient Intake",
+      "item": [
+        {
+          "name": "Create Patient (Valid FHIR)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "",
+                  "pm.test('Response contains patient_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('patient_id');",
+                  "    pm.environment.set('patient_id', jsonData.patient_id);",
+                  "});",
+                  "",
+                  "pm.test('Status is accepted', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.equal('accepted');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceType\": \"Patient\",\n  \"id\": \"patient-{{$timestamp}}\",\n  \"birthDate\": \"1985-06-15\",\n  \"identifier\": [\n    {\n      \"system\": \"http://hospital.org/ssn\",\n      \"value\": \"123-45-6789\",\n      \"type\": {\n        \"text\": \"SSN\"\n      }\n    },\n    {\n      \"system\": \"http://hospital.org/passport\",\n      \"value\": \"AB123456\",\n      \"type\": {\n        \"text\": \"Passport\"\n      }\n    }\n  ],\n  \"name\": [\n    {\n      \"use\": \"official\",\n      \"family\": \"Smith\",\n      \"given\": [\"John\", \"Michael\"]\n    }\n  ],\n  \"gender\": \"male\",\n  \"contact\": [\n    {\n      \"system\": \"phone\",\n      \"value\": \"+1-555-0123\"\n    },\n    {\n      \"system\": \"email\",\n      \"value\": \"john.smith@example.com\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/patient-intake/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "patient-intake"
+              ]
+            },
+            "description": "Create a new patient record with FHIR Patient resource. This endpoint is open in development mode (AllowAny). Uses dynamic timestamp in patient ID to ensure uniqueness."
+          }
+        },
+        {
+          "name": "Create Patient (Minimal)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "",
+                  "pm.test('Response contains patient_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('patient_id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceType\": \"Patient\",\n  \"id\": \"minimal-patient-{{$timestamp}}\",\n  \"birthDate\": \"1990-01-01\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/patient-intake/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "patient-intake"
+              ]
+            },
+            "description": "Create a minimal patient record with only required fields."
+          }
+        },
+        {
+          "name": "Create Patient (Invalid - Under 18)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 (Bad Request)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message mentions age requirement', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(JSON.stringify(jsonData)).to.include('18');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceType\": \"Patient\",\n  \"id\": \"underage-patient-{{$timestamp}}\",\n  \"birthDate\": \"2010-06-15\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/patient-intake/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "patient-intake"
+              ]
+            },
+            "description": "Test validation - patients must be 18+ years old."
+          }
+        },
+        {
+          "name": "Create Patient (Invalid - Wrong ResourceType)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 (Bad Request)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message mentions resourceType', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(JSON.stringify(jsonData)).to.include('resourceType');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceType\": \"Organization\",\n  \"id\": \"org-123\",\n  \"birthDate\": \"1985-06-15\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/patient-intake/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "patient-intake"
+              ]
+            },
+            "description": "Test validation - resourceType must be 'Patient'."
+          }
+        },
+        {
+          "name": "Create Patient (Invalid - Bad Date Format)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 (Bad Request)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message mentions birthDate format', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(JSON.stringify(jsonData)).to.include('birthDate');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceType\": \"Patient\",\n  \"id\": \"bad-date-patient\",\n  \"birthDate\": \"06/15/1985\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/patient-intake/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "patient-intake"
+              ]
+            },
+            "description": "Test validation - birthDate must be in ISO format (YYYY-MM-DD)."
+          }
+        },
+        {
+          "name": "Update Existing Patient",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 (Create-or-Update)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});",
+                  "",
+                  "pm.test('Same patient_id returned', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.patient_id).to.equal('patient-update-test');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceType\": \"Patient\",\n  \"id\": \"patient-update-test\",\n  \"birthDate\": \"1988-03-20\",\n  \"identifier\": [\n    {\n      \"system\": \"http://hospital.org/ssn\",\n      \"value\": \"987-65-4321\",\n      \"type\": {\n        \"text\": \"SSN\"\n      }\n    }\n  ],\n  \"name\": [\n    {\n      \"use\": \"official\",\n      \"family\": \"Updated\",\n      \"given\": [\"Name\"]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/patient-intake/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "patient-intake"
+              ]
+            },
+            "description": "Resubmit the same patient (by patient_id) with updated data. The system performs create-or-update semantics."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Patient Retrieval",
+      "item": [
+        {
+          "name": "Get Patient (Session Auth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains masked SSN', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('ssn_masked');",
+                  "});",
+                  "",
+                  "pm.test('Response contains birth_date', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('birth_date');",
+                  "});",
+                  "",
+                  "pm.test('Masked SSN format is correct (***-**-XXXX)', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.ssn_masked) {",
+                  "        pm.expect(jsonData.ssn_masked).to.match(/^\\*{3}-\\*{2}-\\d{4}$/);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/patients/patient-{{$timestamp}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "patients",
+                "patient-{{$timestamp}}"
+              ]
+            },
+            "description": "Retrieve a patient record. Requires authentication (session or Basic Auth). Replace the patient ID with an actual existing patient ID."
+          }
+        },
+        {
+          "name": "Get Patient (Basic Auth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 or 401', function () {",
+                  "    pm.expect([200, 401]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "admin",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "your_password_here",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/patients/patient-update-test/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "patients",
+                "patient-update-test"
+              ]
+            },
+            "description": "Retrieve a patient using HTTP Basic Authentication. Update the username and password credentials."
+          }
+        },
+        {
+          "name": "Get Patient (Without Auth - Should Fail)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 (Unauthorized)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(401);",
+                  "});",
+                  "",
+                  "pm.test('Response indicates authentication required', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(JSON.stringify(jsonData)).to.include('detail');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/patients/patient-update-test/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "patients",
+                "patient-update-test"
+              ]
+            },
+            "description": "Test that unauthenticated access is properly rejected on retrieval endpoint."
+          }
+        },
+        {
+          "name": "Get Non-Existent Patient",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404 (Not Found)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "admin",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "your_password_here",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/patients/nonexistent-patient-id-12345/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "patients",
+                "nonexistent-patient-id-12345"
+              ]
+            },
+            "description": "Test that requesting a non-existent patient returns 404."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Panel",
+      "item": [
+        {
+          "name": "Admin Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin"
+              ]
+            },
+            "description": "Access the Django admin interface. Requires authentication (session or Basic Auth)."
+          }
+        },
+        {
+          "name": "View Patient Records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/patients/patientrecord/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "patients",
+                "patientrecord"
+              ]
+            },
+            "description": "View all patient records in admin interface."
+          }
+        },
+        {
+          "name": "View Access Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/patients/accesslog/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "patients",
+                "accesslog"
+              ]
+            },
+            "description": "View audit logs of all patient access attempts."
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set base URL if not already set",
+          "if (!pm.environment.get('base_url')) {",
+          "    pm.environment.set('base_url', 'http://localhost:8000');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "patient_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "authenticated",
+      "value": "false",
+      "type": "string"
+    }
+  ]
+}

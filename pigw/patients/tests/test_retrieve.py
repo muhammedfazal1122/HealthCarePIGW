@@ -4,13 +4,21 @@ Tests for the patient retrieve endpoint and access logging.
 import json
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, Client
 from django.urls import reverse
 
 from patients.models import AccessLog, PatientRecord
 
 
-class PatientRetrieveTest(TestCase):
+class CSRFDisabledTestCase(TestCase):
+    """Test case with CSRF protection disabled for API testing."""
+    
+    def setUp(self):
+        super().setUp()
+        self.client = Client(enforce_csrf_checks=False)
+
+
+class PatientRetrieveTest(CSRFDisabledTestCase):
     def setUp(self) -> None:
         User = get_user_model()
         self.user = User.objects.create_user(

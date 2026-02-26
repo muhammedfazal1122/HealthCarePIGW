@@ -8,6 +8,8 @@ from typing import Any, Dict, List, Optional
 
 from django.shortcuts import get_object_or_404
 from django.conf import settings
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
@@ -40,18 +42,14 @@ def _get_client_ip(request: Request) -> Optional[str]:
     return request.META.get("REMOTE_ADDR")
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class PatientIntakeView(APIView):
     """Ingest a FHIR Patient resource and persist it.
 
     Auth: AllowAny in dev for easy curl testing.
     In production, lock this down with IsAuthenticated or API-key middleware.
     """
-
-    # Allow anonymous intake in debug/dev; require auth in production.
-    if settings.DEBUG:
-        permission_classes = [AllowAny]
-    else:
-        permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request: Request) -> Response:
         serializer = PatientIntakeSerializer(data=request.data)

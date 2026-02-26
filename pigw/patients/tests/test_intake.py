@@ -8,10 +8,18 @@ Run with:
 import datetime
 import json
 
-from django.test import TestCase
+from django.test import TestCase, Client
 from django.urls import reverse
 
 from patients.models import PatientRecord
+
+
+class CSRFDisabledTestCase(TestCase):
+    """Test case with CSRF protection disabled for API testing."""
+    
+    def setUp(self):
+        super().setUp()
+        self.client = Client(enforce_csrf_checks=False)
 
 
 def _make_patient(
@@ -49,7 +57,7 @@ def _make_patient(
 INTAKE_URL = "/api/v1/patient-intake/"
 
 
-class IntakeUnder18Test(TestCase):
+class IntakeUnder18Test(CSRFDisabledTestCase):
     """Under-18 patients must be rejected with HTTP 400."""
 
     def test_under_18_is_rejected(self) -> None:
@@ -80,7 +88,7 @@ class IntakeUnder18Test(TestCase):
         self.assertEqual(response.status_code, 400)
 
 
-class IntakeValidPatientTest(TestCase):
+class IntakeValidPatientTest(CSRFDisabledTestCase):
     """Valid adult patient ingestion should persist accurately."""
 
     def setUp(self) -> None:
