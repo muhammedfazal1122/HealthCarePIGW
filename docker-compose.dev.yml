@@ -1,0 +1,76 @@
+# Development docker-compose
+# Mounts local code so changes reflect immediately without rebuilding.
+#
+# Usage:
+#   docker-compose -f docker-compose.dev.yml up
+#
+# Prerequisites: copy .env.example → .env and fill values.
+
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pigw}
+      POSTGRES_USER: ${POSTGRES_USER:-pigw_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - pg_data_dev:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pigw_user}" ]
+      interval: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  web:
+    build:
+      context: .
+      # Use builder stage only for dev (no gunicorn, no collectstatic)
+      target: builder
+    image: pigw:dev
+    command: >
+      sh -c "pip install --no-cache-dir --no-index --find-links /build/wheels /build/wheels/*.whl &&
+             python pigw/manage.py migrate &&
+             python pigw/manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./pigw:/app
+      - .:/workspace
+    working_dir: /workspace
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: pigw.settings.dev
+      CELERY_BROKER_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  worker:
+    image: pigw:dev
+    command: sh -c "celery -A pigw worker -l info"
+    working_dir: /workspace
+    volumes:
+      - ./pigw:/app
+      - .:/workspace
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: pigw.settings.dev
+      CELERY_BROKER_URL: redis://redis:6379/0
+    depends_on:
+      - redis
+      - web
+
+volumes:
+  pg_data_dev:

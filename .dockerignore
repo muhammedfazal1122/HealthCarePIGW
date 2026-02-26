@@ -1,0 +1,43 @@
+# Files and directories to exclude from the Docker build context.
+# Keeping the context small speeds up docker build considerably.
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Secrets – NEVER bake into an image
+.env
+.env.*
+!.env.example
+
+# Development DB
+*.sqlite3
+
+# Git history
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Tests and coverage
+.pytest_cache/
+htmlcov/
+.coverage
+.tox/
+
+# Media and static (served separately in prod)
+media/
+staticfiles/
+
+# Docker compose files (not needed inside container)
+docker-compose*.yml
