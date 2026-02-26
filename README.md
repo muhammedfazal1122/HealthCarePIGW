@@ -149,3 +149,4 @@ pigw/
 - Retrieve endpoint returns masked SSN and writes an access log.
 - Dev settings use SQLite fallback; prod settings expect Postgres and env-driven secrets.
 - Basic tests exist for intake and encryption; extend as needed for new features.
+# HealthCarePIGW
